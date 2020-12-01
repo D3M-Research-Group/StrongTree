@@ -1,0 +1,167 @@
+---
+title: "Generating the Tables Summerizing the Out of Sample Results"
+author: "Sina Aghaei"
+date: "10/24/2020"
+output: 
+  # flexdashboard::flex_dashboard:
+  #   orientation: columns
+  html_document:
+    # number_sections: true
+ 
+---
+
+
+In this script we provide the code for generating the tables summarizing the out of sample results.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,warning = FALSE )
+library(kableExtra)
+library(png)
+library(ggplot2)
+library(reshape2)
+library(egg)
+require(tidyr)
+require(dplyr)
+library(dplyr)
+library(latex2exp)
+# library(ggpubr)
+library(data.table)
+library(RColorBrewer)
+library(MASS)
+require(scales)
+rm(list=ls())
+
+data_train= read.csv('./../Results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_test= read.csv('./../Results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+
+forpres=FALSE
+if (forpres){
+  fontfam = "sans"
+} else {
+  fontfam = "serif"
+}
+
+figure_path = "./"
+
+
+data_train$sample <- as.factor(data_train$sample)
+data_train$depth <- as.factor(data_train$depth)
+
+data_test$sample <- as.factor(data_test$sample)
+data_test$depth <- as.factor(data_test$depth)
+
+#Let's sort the levels of approach such that the oldest method appears first
+data_train$approach<- factor(data_train$approach, levels = c("OCT","BinOCT","FlowOCT","BendersOCT"))
+data_test$approach<- factor(data_test$approach, levels = c("OCT","BinOCT","FlowOCT","BendersOCT"))
+
+#Let's sort the levels of dataset with respect to their size
+data_train$dataset <- factor(data_train$dataset, levels = as.character(unique(data_train[order(data_train$nrow),]$dataset)))
+data_test$dataset <- factor(data_test$dataset, levels = as.character(unique(data_train[order(data_train$nrow),]$dataset)))
+
+
+```
+
+# out of sample result
+
+## test acc across dataset and depth 
+
+```{r echo=TRUE, warning=FALSE}
+tmp  <- data_test
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(test_acc))
+
+names(tmp) <- c("approach","dataset","depth","test_acc")
+
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+tmp_wide$OCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[1]==max(x))*1)
+tmp_wide$BinOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[2]==max(x))*1)
+tmp_wide$FlowOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[3]==max(x))*1)
+tmp_wide$BendersOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[4]==max(x))*1)
+tmp_wide$FlowORBenders_wins <- (as.numeric(as.character(tmp_wide$FlowOCT_wins ))| as.numeric(as.character(tmp_wide$BendersOCT_wins)))*1
+
+tmp_wide$ties <- tmp_wide$OCT_wins + tmp_wide$BinOCT_wins + tmp_wide$FlowORBenders_wins
+tmp_wide$flow_ties <- tmp_wide$FlowOCT_wins + tmp_wide$BendersOCT_wins 
+
+factor_cols <- c("OCT_wins","BinOCT_wins","FlowOCT_wins","BendersOCT_wins","FlowORBenders_wins")
+for(f in factor_cols){
+  tmp_wide[[f]]<- as.factor(tmp_wide[[f]])
+}
+
+print(tmp_wide[,1:6])
+summary(tmp_wide[,7:11])
+summary(tmp_wide[tmp_wide$ties == 1,7:11])
+paste("When we exclude the ties we can  see that OCT is the best  in 5, BinOCT is the best in 7 and FlowOCT and BendersOCT are the best in 19 (combined).")
+summary(tmp_wide[tmp_wide$ties == 1 & tmp_wide$flow_ties==1 ,7:11])
+paste("Out of those 19, They tie in 5 and in the remaining 19, each of them are better in half of them")
+```
+
+Now let's see how much we improve out of sample acc
+```{r}
+tmp <- tmp_wide
+tmp$BendersOCTminusBinOCT <- tmp$BendersOCT_test_acc - tmp$BinOCT_test_acc
+tmp$BendersOCTminusOCT <- tmp$BendersOCT_test_acc - tmp$OCT_test_acc
+
+tmp$FlowOCTminusBinOCT <- tmp$FlowOCT_test_acc - tmp$BinOCT_test_acc
+tmp$FlowOCTminusOCT <- tmp$FlowOCT_test_acc - tmp$OCT_test_acc
+
+summary(tmp$BendersOCTminusBinOCT)
+summary(tmp$BendersOCTminusOCT)
+summary(tmp$FlowOCTminusBinOCT)
+summary(tmp$FlowOCTminusOCT)
+rm(tmp)
+```
+
+
+Now let's save the above table in a latex table format
+
+```{r echo=TRUE, warning=FALSE}
+tmp  <- data_test
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(test_acc),sd(test_acc))
+
+names(tmp) <- c("approach","dataset","depth","mean","sd")
+
+tmp$metric <- paste(format(round(tmp$mean, 2), nsmall = 2),"$\\pm$",sep = "")
+tmp$metric <- paste(tmp$metric,format(round(tmp$sd, 2), nsmall = 2),sep = "")
+tmp$mean <- NULL
+tmp$sd <- NULL
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+names(tmp_wide) <- gsub("_metric","",names(tmp_wide))
+
+
+find_max <- function(r){
+  r <- as.character(r)
+  r_mean = c()
+  r_sd = c()
+  final_max_score = numeric(length(r))
+  for(j in r){
+    r_mean = append(r_mean,unlist(strsplit(j,"$\\pm$"))[1])
+    r_sd = append(r_sd,unlist(strsplit(j,"$\\pm$"))[2])
+  }
+  max_mean <- which(r_mean == max(r_mean))
+  min_sd <- which(r_sd[max_mean] == min(r_sd[max_mean] ))
+  min_sd <- max_mean[min_sd]
+  
+  final_max_score[max_mean] = final_max_score[max_mean] + 2
+  final_max_score[min_sd] = final_max_score[min_sd] + 1
+  
+  max_index = which(final_max_score == max(final_max_score))
+  r[max_index] <- paste("\\textbf{",r[max_index],"}",sep = "")
+  
+  r
+}
+
+
+for(i in 1:nrow(tmp_wide)){
+  tmp_wide[i,3:6] <- find_max(tmp_wide[i,3:6])
+}
+
+write.table(tmp_wide, "out_of_sample_acc.txt",row.names = FALSE,sep = "&",eol = "\\\\", quote=FALSE)
+```

@@ -1,0 +1,272 @@
+---
+title: "Generating the Tables Summerizing the In Sample Results"
+author: "Sina Aghaei"
+date: "10/24/2020"
+output: 
+  # flexdashboard::flex_dashboard:
+  #   orientation: columns
+  html_document:
+    # number_sections: true
+ 
+---
+
+
+In this script we provide the code for generating the tables summarizing the in sample results.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,warning = FALSE )
+library(kableExtra)
+library(png)
+library(ggplot2)
+library(reshape2)
+library(egg)
+require(tidyr)
+require(dplyr)
+library(dplyr)
+library(latex2exp)
+# library(ggpubr)
+library(data.table)
+library(RColorBrewer)
+library(MASS)
+require(scales)
+rm(list=ls())
+
+data_train= read.csv('./../Results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_test= read.csv('./../Results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+
+forpres=FALSE
+if (forpres){
+  fontfam = "sans"
+} else {
+  fontfam = "serif"
+}
+
+figure_path = "./"
+
+
+data_train$sample <- as.factor(data_train$sample)
+data_train$depth <- as.factor(data_train$depth)
+
+data_test$sample <- as.factor(data_test$sample)
+data_test$depth <- as.factor(data_test$depth)
+
+#Let's sort the levels of approach such that the oldest method appears first
+data_train$approach<- factor(data_train$approach, levels = c("OCT","BinOCT","FlowOCT","BendersOCT"))
+data_test$approach<- factor(data_test$approach, levels = c("OCT","BinOCT","FlowOCT","BendersOCT"))
+
+#Let's sort the levels of dataset with respect to their size
+data_train$dataset <- factor(data_train$dataset, levels = as.character(unique(data_train[order(data_train$nrow),]$dataset)))
+data_test$dataset <- factor(data_test$dataset, levels = as.character(unique(data_train[order(data_train$nrow),]$dataset)))
+
+
+```
+
+
+
+
+```{r echo=TRUE, warning=FALSE}
+find_max <- function(r){
+  r <- as.character(r)
+  r_mean = c()
+  r_sd = c()
+  final_max_score = numeric(length(r))
+  for(j in r){
+    r_mean = append(r_mean,unlist(strsplit(j,"$\\pm$"))[1])
+    r_sd = append(r_sd,unlist(strsplit(j,"$\\pm$"))[2])
+  }
+  max_mean <- which(r_mean == max(r_mean))
+  min_sd <- which(r_sd[max_mean] == min(r_sd[max_mean] ))
+  min_sd <- max_mean[min_sd]
+  
+  final_max_score[max_mean] = final_max_score[max_mean] + 2
+  final_max_score[min_sd] = final_max_score[min_sd] + 1
+  
+  max_index = which(final_max_score == max(final_max_score))
+  r[max_index] <- paste("\\textbf{",r[max_index],"}",sep = "")
+  
+  r
+}
+
+find_min <- function(r){
+  r <- as.character(r)
+  r_mean = c()
+  r_sd = c()
+  final_max_score = numeric(length(r))
+  for(j in r){
+    r_mean = append(r_mean,unlist(strsplit(j,"$\\pm$"))[1])
+    r_sd = append(r_sd,unlist(strsplit(j,"$\\pm$"))[2])
+  }
+  min_mean <- which(r_mean == min(r_mean))
+  min_sd <- which(r_sd[min_mean] == min(r_sd[min_mean] ))
+  min_sd <- min_mean[min_sd]
+  
+  final_max_score[min_mean] = final_max_score[min_mean] + 2
+  final_max_score[min_sd] = final_max_score[min_sd] + 1
+  
+  max_index = which(final_max_score == max(final_max_score))
+  r[max_index] <- paste("\\textbf{",r[max_index],"}",sep = "")
+  
+  r
+}
+```
+
+
+## training acc across dataset and depth (no regularization)
+```{r echo=TRUE, warning=FALSE}
+# No regularization part
+measure = "min"
+tmp  <- subset(data_train, data_train$regularization == FALSE)
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(gap))
+
+names(tmp) <- c("approach","dataset","depth","metric")
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+if(measure == "max"){
+  tmp_wide$OCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[1]==max(x))*1)
+  tmp_wide$BinOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[2]==max(x))*1)
+  tmp_wide$FlowOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[3]==max(x))*1)
+  tmp_wide$BendersOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[4]==max(x))*1)
+  tmp_wide$FlowORBenders_wins <- (as.numeric(as.character(tmp_wide$FlowOCT_wins ))| as.numeric(as.character(tmp_wide$BendersOCT_wins)))*1
+
+}else{
+    tmp_wide$OCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[1]==min(x))*1)
+    tmp_wide$BinOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[2]==min(x))*1)
+    tmp_wide$FlowOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[3]==min(x))*1)
+    tmp_wide$BendersOCT_wins <- apply(tmp_wide[,3:6],1,function(x) (x[4]==min(x))*1)
+    tmp_wide$FlowORBenders_wins <- (as.numeric(as.character(tmp_wide$FlowOCT_wins ))| as.numeric(as.character(tmp_wide$BendersOCT_wins)))*1
+}
+
+tmp_wide$ties <- tmp_wide$OCT_wins + tmp_wide$BinOCT_wins + tmp_wide$FlowORBenders_wins
+tmp_wide$flow_ties <- tmp_wide$FlowOCT_wins + tmp_wide$BendersOCT_wins 
+
+factor_cols <- c("OCT_wins","BinOCT_wins","FlowOCT_wins","BendersOCT_wins","FlowORBenders_wins")
+for(f in factor_cols){
+  tmp_wide[[f]]<- as.factor(tmp_wide[[f]])
+}
+
+# print(tmp_wide[,1:6])
+summary(tmp_wide[,7:11])
+summary(tmp_wide[tmp_wide$ties == 1,7:11])
+summary(tmp_wide[tmp_wide$ties == 1 & tmp_wide$flow_ties==1 ,7:11])
+rm(tmp,tmp_wide)
+```
+
+Now let's save above tables in latex format
+```{r echo=TRUE, warning=FALSE}
+# No regularization part
+tmp  <- subset(data_train, data_train$regularization == FALSE)
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(train_acc),sd(train_acc),mean(gap),sd(gap),mean(solving_time),sd(solving_time))
+
+names(tmp) <- c("approach","dataset","depth","acc_mean","acc_sd","gap_mean","gap_sd","time_mean","time_sd")
+
+tmp$acc <- paste(format(round(tmp$acc_mean, 2), nsmall = 2),"$\\pm$",sep = "")
+tmp$acc <- paste(tmp$acc,format(round(tmp$acc_sd, 2), nsmall = 2),sep = "")
+tmp$acc_mean <- NULL
+tmp$acc_sd <- NULL
+
+tmp$gap <- paste(format(round(tmp$gap_mean, 2), nsmall = 2),"$\\pm$",sep = "")
+tmp$gap <- paste(tmp$gap,format(round(tmp$gap_sd, 2), nsmall = 2),sep = "")
+tmp$gap_mean <- NULL
+tmp$gap_sd <- NULL
+
+tmp$time <- paste(format(round(tmp$time_mean, 0), nsmall = 0),"$\\pm$",sep = "")
+tmp$time <- paste(tmp$time,format(round(tmp$time_sd, 0), nsmall = 0),sep = "")
+tmp$time_mean <- NULL
+tmp$time_sd <- NULL
+
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+for(i in 1:nrow(tmp_wide)){
+  tmp_wide[i,seq(3,14,3)] <- find_max(tmp_wide[i,seq(3,14,3)])
+  tmp_wide[i,seq(4,14,3)] <- find_min(tmp_wide[i,seq(4,14,3)])
+  tmp_wide[i,seq(5,14,3)] <- find_min(tmp_wide[i,seq(5,14,3)])
+}
+
+print(tmp_wide)
+write.table(tmp_wide, "in_sample_reg.txt",row.names = FALSE,sep = "&",eol = "\\\\", quote=FALSE)
+```
+
+
+## training acc across dataset and depth (with regularization)
+
+Since the comparison of training acc over different values of lambdas does not make sense, we exclude training_acc from this table.
+
+```{r echo=TRUE, warning=FALSE}
+# No regularization part
+measure = "min"
+tmp  <- subset(data_train, data_train$regularization == TRUE)
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(solving_time))
+
+names(tmp) <- c("approach","dataset","depth","metric")
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+if(measure == "max"){
+  tmp_wide$OCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[1]==max(x))*1)
+  tmp_wide$FlowOCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[2]==max(x))*1)
+  tmp_wide$BendersOCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[3]==max(x))*1)
+  tmp_wide$FlowORBenders_wins <- (as.numeric(as.character(tmp_wide$FlowOCT_wins ))| as.numeric(as.character(tmp_wide$BendersOCT_wins)))*1
+
+}else{
+    tmp_wide$OCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[1]==min(x))*1)
+    tmp_wide$FlowOCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[2]==min(x))*1)
+    tmp_wide$BendersOCT_wins <- apply(tmp_wide[,3:5],1,function(x) (x[3]==min(x))*1)
+    tmp_wide$FlowORBenders_wins <- (as.numeric(as.character(tmp_wide$FlowOCT_wins ))| as.numeric(as.character(tmp_wide$BendersOCT_wins)))*1
+}
+
+tmp_wide$ties <- tmp_wide$OCT_wins + tmp_wide$FlowORBenders_wins
+tmp_wide$flow_ties <- tmp_wide$FlowOCT_wins + tmp_wide$BendersOCT_wins 
+
+
+factor_cols <- c("OCT_wins","FlowOCT_wins","BendersOCT_wins","FlowORBenders_wins")
+for(f in factor_cols){
+  tmp_wide[[f]]<- as.factor(tmp_wide[[f]])
+}
+
+# print(tmp_wide[,1:5])
+summary(tmp_wide[,6:9])
+summary(tmp_wide[tmp_wide$ties == 1,6:9])
+summary(tmp_wide[tmp_wide$ties == 1 & tmp_wide$flow_ties==1 ,6:9])
+rm(tmp,tmp_wide)
+```
+
+Now let's save the above table in a latex table format
+```{r echo=TRUE, warning=FALSE}
+# No regularization part
+tmp  <- subset(data_train, data_train$regularization == TRUE)
+
+tmp <- tmp %>%
+  group_by(approach,dataset,depth) %>%
+  summarise(mean(gap),sd(gap),mean(solving_time),sd(solving_time))
+
+names(tmp) <- c("approach","dataset","depth","gap_mean","gap_sd","time_mean","time_sd")
+
+
+tmp$gap <- paste(format(round(tmp$gap_mean, 2), nsmall = 2),"$\\pm$",sep = "")
+tmp$gap <- paste(tmp$gap,format(round(tmp$gap_sd, 2), nsmall = 2),sep = "")
+tmp$gap_mean <- NULL
+tmp$gap_sd <- NULL
+
+tmp$time <- paste(format(round(tmp$time_mean, 0), nsmall = 0),"$\\pm$",sep = "")
+tmp$time <- paste(tmp$time,format(round(tmp$time_sd, 0), nsmall = 0),sep = "")
+tmp$time_mean <- NULL
+tmp$time_sd <- NULL
+
+tmp_wide <- dcast(melt(tmp, id.vars=c("dataset","approach","depth")), dataset + depth~ approach + variable)
+
+for(i in 1:nrow(tmp_wide)){
+  tmp_wide[i,seq(3,8,2)] <- find_min(tmp_wide[i,seq(3,8,2)])
+  tmp_wide[i,seq(4,8,2)] <- find_min(tmp_wide[i,seq(4,8,2)])
+}
+
+write.table(tmp_wide, "in_sample_no_reg.txt",row.names = FALSE,sep = "&",eol = "\\\\", quote=FALSE)
+```
