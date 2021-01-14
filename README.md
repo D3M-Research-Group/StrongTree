@@ -60,15 +60,4 @@ change the hard-coded label name to the desired name.
 
 
 
-## Citing
 
-If you use FlowOCT in your work, please consider citing our preprint
-
-```
-@article{aghaei2020learning,
-  title={Learning Optimal Classification Trees: Strong Max-Flow Formulations},
-  author={Aghaei, Sina and Gomez, Andres and Vayanos, Phebe},
-  journal={arXiv preprint arXiv:2002.09142},
-  year={2020}
-}
-```
