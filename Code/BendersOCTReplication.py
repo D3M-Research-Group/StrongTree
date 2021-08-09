@@ -3,14 +3,14 @@ from gurobipy import *
 import pandas as pd
 import sys
 import time
-from utils.Tree import Tree
-from formulations.BendersOCT import BendersOCT
+from Tree import Tree
+from BendersOCT import BendersOCT
 import logger
 import getopt
 import csv
 from sklearn.model_selection import train_test_split
-from utils.utils import *
-from utils.logger import logger
+from utils import *
+from logger import logger
 
 
 def get_left_exp_integer(master, b, n, i):
@@ -215,7 +215,7 @@ def main(argv):
     When we want to calibrate _lambda, for a given value of _lambda we train the model on train and evaluate
     the accuracy on calibration set and at the end we pick the _lambda with the highest accuracy.
 
-    When we got the calibrated _lambda, we train the mode on (train+calibration) which we refer to it as 
+    When we got the calibrated _lambda, we train the mode on (train+calibration) which we refer to it as
     data_train_calibration and evaluate the accuracy on (test)
 
     '''

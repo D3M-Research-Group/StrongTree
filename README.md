@@ -14,13 +14,13 @@ The content of this repository is as follows:
 
 - `Code` contains the implementation of approaches **FlowOCT** and **BendersOCT**:
 
-    - `formulations` includes the formulation of each approach in gurobipy.
+    - `FlowOCT.py` and `BendersOCT.py` include the formulation of each approach in gurobipy.
 
-    - `experiments` contains the replication file for each approach which is resposible for creating and solving the problem and producing result
+    - `FlowOCTReplication.py` and `BendersOCTReplication.py` contains the replication code for each approach which is responsible for creating and solving the problem and producing result
 
-    - `utils` contains
-      - `Tree` which creates the binary tree
-      - `logger` logs the output of console into a text file
+    - We have some utility files as follows
+      - `Tree.py` which creates the binary tree
+      - `logger.py` logs the output of console into a text file
 - `Results` contains the experiments raw results.
 
 - `plots` contains the R script for generating figures and tables from the tabular results.
@@ -38,13 +38,13 @@ The content of this repository is as follows:
     - d : maximum depth of the tree
     - t : time limit
     - l : value of _lambda
-    - i : sample (for shuffling and spliting data)
+    - i : sample (for shuffling and splitting data)
     - c : 1 if we do calibration; in this case we train our model on 50% of the data otherwise we train on 75% of the data
 
-You can call the main function within a python file as follows (This is what we do in `./experiments/run_exp.py`
+You can call the main function within a python file as follows (This is what we do in `run_exp.py`
 
 ```python
-from experiments import FlowOCTReplication
+import FlowOCTReplication
 FlowOCTReplication.main(["-f", 'monk1_enc.csv', "-d", 2, "-t", 3600, "-l", 0, "-i", 1, "-c", 1])
 ```
 or you could run it from terminal    
@@ -57,7 +57,3 @@ The result of each instance would get stored in a csv file in `./Results/`.
 
 Remember that in the replication files we assume that the name of the class label column is `target`. If you want to use a dataset of your own choice,
 change the hard-coded label name to the desired name.
-
-
-
-

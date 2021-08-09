@@ -3,14 +3,14 @@ from gurobipy import *
 import pandas as pd
 import sys
 import time
-from utils.Tree import Tree
-from formulations.FlowOCT import FlowOCT
+from Tree import Tree
+from FlowOCT import FlowOCT
 import logger
 import getopt
 import csv
 from sklearn.model_selection import train_test_split
-from utils.utils import *
-from utils.logger import logger
+from utils import *
+from logger import logger
 
 
 def main(argv):
@@ -78,13 +78,13 @@ def main(argv):
     '''
     Creating  train, test and calibration datasets
     We take 50% of the whole data as training, 25% as test and 25% as calibration
-    
+
     When we want to calibrate _lambda, for a given value of _lambda we train the model on train and evaluate
     the accuracy on calibration set and at the end we pick the _lambda with the highest accuracy.
-    
-    When we got the calibrated _lambda, we train the mode on (train+calibration) which we refer to it as 
+
+    When we got the calibrated _lambda, we train the mode on (train+calibration) which we refer to it as
     data_train_calibration and evaluate the accuracy on (test)
-    
+
     '''
     data_train, data_test = train_test_split(data, test_size=0.25, random_state=random_states_list[input_sample - 1])
     data_train_calibration, data_calibration = train_test_split(data_train, test_size=0.33,
@@ -135,7 +135,7 @@ def main(argv):
     '''
     For classification we report accuracy
     For regression we report MAE (Mean Absolute Error) , MSE (Mean Squared Error) and  R-squared
-    
+
     over training, test and the calibration set
     '''
     train_acc = test_acc = calibration_acc = 0
