@@ -32,8 +32,8 @@ library(MASS)
 require(scales)
 rm(list=ls())
 
-data_train= read.csv('./../Results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
-data_test= read.csv('./../Results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_train= read.csv('./../Results/paper results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_test= read.csv('./../Results/paper results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
 
 forpres=FALSE
 if (forpres){

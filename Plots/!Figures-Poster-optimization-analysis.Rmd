@@ -86,18 +86,25 @@ tmp$Approach  <- factor(tmp$Approach , levels = c("BendersOCT", "FlowOCT", "BinO
 tmp <- tmp[order(tmp$Approach),]
 colors <- c( brewer.pal(4, 'Set1')[3], brewer.pal(4, 'Set1')[2], brewer.pal(4, 'Set1')[4], brewer.pal(4, 'Set1')[1] ) #c("firebrick1 == 1","violetred==4","seagreen4==3","royalblue==2")
 shapes <- c(15,16,17,4)
-g1 <- ggplot(data = tmp, aes(x=solving_time, y=numOfInstances, group=Approach,color=Approach)) +
-  geom_line(size=0.5)+ #aes(linetype=Approach)
-  geom_point(aes(shape=Approach),size=2)+ 
-  labs(x="Time (s)", y = "Number of Instances Solved")+
+g1 <- ggplot(data = tmp, aes(x=solving_time/1000, y=numOfInstances, group=Approach,color=Approach)) +
+  geom_line(size=2)+ #aes(linetype=Approach)
+  geom_point(aes(shape=Approach),size=3)+ 
+  labs(x="Time (1000s)", y = "# of Instances Solved")+
   scale_color_manual(values=colors)+
   scale_shape_manual(values=shapes)+
-  theme(legend.position = "right",text = element_text(size=14,family=fontfam)) #14
+  theme(
+    axis.text = element_text(size = 25),
+    legend.position = "right", legend.key.size = unit(1, "cm"),
+    legend.text = element_text(size = 27),
+    legend.title = element_text(size = 30),
+    text = element_text(family=fontfam),
+    axis.title = element_text(size = 29)
+    ) #14
 print(g1)
 
 if (forpres)
 {
-  ggsave(paste(figure_path,"class_perf_opt_no_regularization_presentation.pdf",sep = ""),device = "pdf", width = 7, height = 4.62, units =  "in")
+  ggsave(paste(figure_path,"class_perf_opt_no_regularization_presentation.pdf",sep = ""),device = "pdf", width = 9, height = 5, units =  "in")
 } else {
   ggsave(paste(figure_path,"class_perf_opt_no_regularization.pdf",sep = ""),device = "pdf", width = 5, height = 3.3, units =  "in")
 }

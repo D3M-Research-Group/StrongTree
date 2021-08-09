@@ -29,8 +29,8 @@ library(MASS)
 require(scales)
 rm(list=ls())
 
-data_train= read.csv('./../Results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
-data_test= read.csv('./../Results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_train= read.csv('./../Results/paper results/train.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
+data_test= read.csv('./../Results/paper results/test.csv', header=TRUE, sep=',', na.strings="", stringsAsFactors =TRUE) 
 
 forpres=FALSE
 if (forpres){
@@ -92,6 +92,7 @@ print(tmp_wide[,1:6])
 summary(tmp_wide[,7:11])
 summary(tmp_wide[tmp_wide$ties == 1,7:11])
 rm(tmp_wide,tmp,gap_to_save)
+
 ```
 
 
@@ -146,3 +147,9 @@ rm(tmp)
 write.table(tmp_wide, "in_sample_gap.txt",row.names = FALSE,sep = "&",eol = "\\\\", quote=FALSE)
 
 ```
+
+
+
+
+
+
